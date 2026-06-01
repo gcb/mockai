@@ -26,3 +26,7 @@ Everything in this optional dir will be copied to the user home in the container
 # LICENSE
 
 AGPL3 or newer
+
+# Similar projects
+
+- https://github.com/polly3d/mockai - more mature version in javascript
