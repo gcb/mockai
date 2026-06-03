@@ -39,9 +39,13 @@ RUN rm -rf /var/lib/apt/lists/*
 
 # entry as user
 USER ${USER}
-WORKDIR /home/${USER}
-CMD ["bash", "--login"]
-# if you need to automate this:
-# set the volumes like we do on `docker run` in the makefile and,
-# WORKDIR /home/${USER}/code/
-# CMD: python -m pip install -r requirements.txt && python mockai.py
+# --- debug start:
+#WORKDIR /home/${USER}
+#CMD ["bash", "--login"]
+# --- automated start:
+WORKDIR /home/${USER}/code/
+# NOTE: these commands depend on the volume mounted at run time! so they
+#       CANNOT run before docker run. hence they are concatenated on CMD.
+#RUN ["python", "-m", "pip", "install", "-r", "requirements.txt"]
+#CMD ["python", "mockai.py"]
+CMD ["bash", "-c", "python -m pip install -r requirements.txt && python mockai.py"]
