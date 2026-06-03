@@ -44,8 +44,17 @@ USER ${USER}
 #CMD ["bash", "--login"]
 # --- automated start:
 WORKDIR /home/${USER}/code/
+# -- option A
 # NOTE: these commands depend on the volume mounted at run time! so they
 #       CANNOT run before docker run. hence they are concatenated on CMD.
 #RUN ["python", "-m", "pip", "install", "-r", "requirements.txt"]
 #CMD ["python", "mockai.py"]
-CMD ["bash", "-c", "python -m pip install -r requirements.txt && python mockai.py"]
+# -- option B (too slow, pip install on every run)
+#CMD ["bash", "-c", "python -m pip install -r requirements.txt && python mockai.py"]
+# -- option C
+USER root
+COPY code/requirements.txt /tmp
+RUN chmod a+r /tmp/requirements.txt
+USER ${USER}
+RUN ["python", "-m", "pip", "install", "-r", "/tmp/requirements.txt"]
+CMD ["python", "mockai.py", "--log-level", "debug"]
