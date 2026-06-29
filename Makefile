@@ -25,7 +25,8 @@ build: Dockerfile $(wildcard user-home)
 
 # NOTE: we will name the container 'mockai01', so you can only have one using this file
 run:
-	doas docker run --rm -it -v "${PATH_CODE}:/home/${USER}/code" --env MOCKAI_PORT=${PORT} -p 127.0.0.1:${PORT}:${PORT} --name mockai01  mockai
+	-doas docker network create mymenet
+	doas docker run --rm -it --network mymenet -v "${PATH_CODE}:/home/${USER}/code" --env MOCKAI_PORT=${PORT} -p 127.0.0.1:${PORT}:${PORT} --name mockai01  mockai
 
 # join a running container as root
 .PHONY: root
