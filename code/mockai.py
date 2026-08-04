@@ -88,6 +88,7 @@ async def mock(request: Request) -> ResponseModel:
         raise HTTPException(status_code=400, detail="Invalid request payload. no model")
 
     inputs = body["input"]
+    #logger.debug(pprint.pformat(inputs))
     if not isinstance(inputs, list):
         logger.debug('no input list')
         raise HTTPException(status_code=400, detail="Invalid request payload. no input")
@@ -106,7 +107,6 @@ async def mock(request: Request) -> ResponseModel:
         for sub_item in content:
             if not isinstance(sub_item, dict):
                 logger.debug('sub_item not dict')
-                logger.debug(pprint.pformat(sub_item))
                 raise HTTPException(status_code=400, detail="Invalid request payload")
             if "type" not in sub_item:
                 logger.debug('no type in sub_item')
