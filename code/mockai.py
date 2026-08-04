@@ -3,6 +3,7 @@ from fastapi_mock import MockUtilities
 from dataclasses import dataclass
 import os
 import uvicorn
+import pprint
 import logging
 
 # Configure the logger
@@ -105,6 +106,7 @@ async def mock(request: Request) -> ResponseModel:
         for sub_item in content:
             if not isinstance(sub_item, dict):
                 logger.debug('sub_item not dict')
+                logger.debug(pprint.pformat(sub_item))
                 raise HTTPException(status_code=400, detail="Invalid request payload")
             if "type" not in sub_item:
                 logger.debug('no type in sub_item')
@@ -124,7 +126,7 @@ async def mock(request: Request) -> ResponseModel:
             else:
                 raise HTTPException(status_code=400, detail="Invalid request payload")
 
-    fixed_string = '{"examType": "sample_type", "date": "sample_date", "patientName": "sample_name", "requestinDoctorName": "sample_doctor", "metrics": [{"metricName": "sample_metric", "metricValueUnit": "sample_unit", "metricValue": 0.0, "metricReferenceValueMin": 0.0, "metricReferenceValueMax": 0.0, "metricMethodology": "sample_methodology", "examType": "sample_type", "date": "sample_date", "patientName": "sample_name", "requestinDoctorName": "sample_doctor", "metrics": []}]}'
+    fixed_string = os.getenv('MOCKAI_RESPONSE') or '{"examType": "sample_type", "date": "sample_date", "patientName": "sample_name", "requestinDoctorName": "sample_doctor", "metrics": [{"metricName": "sample_metric", "metricValueUnit": "sample_unit", "metricValue": 0.0, "metricReferenceValueMin": 0.0, "metricReferenceValueMax": 0.0, "metricMethodology": "sample_methodology", "examType": "sample_type", "date": "sample_date", "patientName": "sample_name", "requestinDoctorName": "sample_doctor", "metrics": []}]}'
     return ResponseModel(message=fixed_string)
 
 

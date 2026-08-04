@@ -33,3 +33,6 @@ run:
 root:
 	doas docker exec -it -u root mockai01 /bin/bash
 
+.PHONY: test
+test:
+	PYTHONPATH=/home/gcb/code/mock-openai/code python3 /home/gcb/code/mock-openai/code/test_mockai.py
