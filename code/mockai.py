@@ -129,7 +129,7 @@ async def mock(request: Request) -> ResponseModel:
 
     msg = Message(role='assistant', content=MOCK_MESSAGE)
     choice = Choice(index=0, message=msg, finish_reason='stop')
-    return ResponseModel(id='mock00001', object='chat.completions', model='mock01', choices=[choice] )
+    return ResponseModel(id='mock00001', object='chat.completions', model='Emily01', choices=[choice] )
 
 
 
