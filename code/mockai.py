@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi_mock import MockUtilities
 from dataclasses import dataclass
+from typing import List
 import os
+import json
 import uvicorn
 import pprint
 import logging
@@ -15,79 +17,77 @@ try:
 except ValueError:
     port = 8080
 
+try:
+    MOCK_MESSAGE = os.getenv('MOCKAI_MESSAGE')
+except ValueError:
+    MOCK_MESSAGE = 'hello world'
 
 app = FastAPI( title="dummy opensplop api server", version="0.1.0",)
 
+GLOBAL_ID_COUNT = 0; # used for request i count
 
 # just create an instance of MockUtilities and pass FastAPI app as argument to it. It will add exception handlers to
 # the app automatically.
-MockUtilities(app, return_example_instead_of_500=True)
+#MockUtilities(app, return_example_instead_of_500=True)
 
 @dataclass
-class ResponseModel():
-    message: str
+class Message():
+    role: str
+    content: str
+    #tool_calls: Optional[List[Any]] = None
 
+@dataclass
+class Choice():
+    index: int
+    message: Message
+    finish_reason: str
+
+@dataclass
+class Usage():
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+# this would be returned in case we use MockUtilities return instead of 500:
+@dataclass
+class ResponseModel():
+    id: str
+    object: str
+    #created: int
+    model: str
+    choices: List[Choice]
+    #usage: Usage
+
+@app.post("/v1/chat/completions", status_code=200)
+async def mockchat(request: Request) -> ResponseModel:
+    return await mock(request)
 
 # TODO: use a data file, like https://github.com/polly3d/mockai does. maybe even the same format?
 @app.post("/v1/responses", status_code=200)
 async def mock(request: Request) -> ResponseModel:
-    """
-    Mocks the /v1/responses end point. For the purpose of this project, it should receive a single input, and reply a fixed fake string.
-    This endpoint will be called with the following  client code:
-        from openai import OpenAI
-        from pydantic import BaseModel
-        client = OpenAI()
-        class ExamMetricData(BaseModel):
-            metricName: str
-            metricValueUnit: str
-            metricValue: number
-            metricReferenceValueMin: number
-            metricReferenceValueMax: number
-            metricMethodology: str
-        class ExamData(BaseModel):
-            examType: str
-            date: str
-            patientName: str
-            requestinDoctorName: str
-            metrics: list[ExamData]
-        response = client.responses.parse(
-            model="gpt-4o-2024-08-06",
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "input_text", "text": "Extract all text from this image."},
-                        {
-                            "type": "input_image",
-                            "image_base64": image_base64
-                        }
-                    ]
-                }
-            ],
-            text_format=ExamData,
-        )
-        event = response.output_parsed
-    This code should not try to understand or even parse the contents of the request’s input,
-    just make sure if the input for the request is valid and have all the above expected keys.
-    Then it must reply with a fixed string that mimics the original openai api response for a similar request,
-    again, not parsing the contents, only the types, and replying with very boring sample data.
-    """
-    logger.info(' --> POST /v1/reponses');
     try:
         body = await request.json()
     except Exception:
         logger.debug('not json')
         raise HTTPException(status_code=400, detail="Invalid request payload. not json")
 
+    #logger.debug(json.dumps(body));
     if not isinstance(body, dict):
         logger.debug('not instance of dict')
         raise HTTPException(status_code=400, detail="Invalid request payload. not instance")
 
-    if "model" not in body or "input" not in body:
+    if "model" not in body:
         logger.debug('no model')
         raise HTTPException(status_code=400, detail="Invalid request payload. no model")
 
-    inputs = body["input"]
+    if "input" in body:
+        inputs = body["input"] # responses
+    elif "messages" in body:
+        inputs = body["messages"] # responses
+    else:
+        logger.debug('no input|messages') # completions
+        raise HTTPException(status_code=400, detail="Invalid request payload. no model")
+
     #logger.debug(pprint.pformat(inputs))
     if not isinstance(inputs, list):
         logger.debug('no input list')
@@ -104,19 +104,19 @@ async def mock(request: Request) -> ResponseModel:
         if not isinstance(content, list):
             logger.debug('no content list')
             raise HTTPException(status_code=400, detail="Invalid request payload. no content")
-        for sub_item in content:
-            if not isinstance(sub_item, dict):
+        for content_item in content:
+            if not isinstance(content_item, dict):
                 logger.debug('sub_item not dict')
                 raise HTTPException(status_code=400, detail="Invalid request payload")
-            if "type" not in sub_item:
+            if "type" not in content_item:
                 logger.debug('no type in sub_item')
                 raise HTTPException(status_code=400, detail="Invalid request payload")
-            if sub_item["type"] == "input_text":
-                if "text" not in sub_item:
+            if content_item["type"] == "text":
+                if "text" not in content_item:
                     logger.debug('no text in input_text sub_item')
                     raise HTTPException(status_code=400, detail="Invalid request payload")
-            elif sub_item["type"] == "input_image":
-                if "image_url" not in sub_item:
+            elif content_item["type"] == "image_url":
+                if "image_url" not in content_item:
                     logger.debug('no image_url in input_image sub_item')
                     raise HTTPException(status_code=400, detail="Invalid request payload")
                 #if "image_base64" not in sub_item:
@@ -124,10 +124,12 @@ async def mock(request: Request) -> ResponseModel:
                 #    logger.debug(sub_item)
                 #    raise HTTPException(status_code=400, detail="Invalid request payload")
             else:
+                logger.debug('unkown type ', content_item["type"])
                 raise HTTPException(status_code=400, detail="Invalid request payload")
 
-    fixed_string = os.getenv('MOCKAI_RESPONSE') or '{"examType": "sample_type", "date": "sample_date", "patientName": "sample_name", "requestinDoctorName": "sample_doctor", "metrics": [{"metricName": "sample_metric", "metricValueUnit": "sample_unit", "metricValue": 0.0, "metricReferenceValueMin": 0.0, "metricReferenceValueMax": 0.0, "metricMethodology": "sample_methodology", "examType": "sample_type", "date": "sample_date", "patientName": "sample_name", "requestinDoctorName": "sample_doctor", "metrics": []}]}'
-    return ResponseModel(message=fixed_string)
+    msg = Message(role='assistant', content=MOCK_MESSAGE)
+    choice = Choice(index=0, message=msg, finish_reason='stop')
+    return ResponseModel(id='mock00001', object='chat.completions', model='mock01', choices=[choice] )
 
 
 
